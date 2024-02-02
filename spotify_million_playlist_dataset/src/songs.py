@@ -15,18 +15,6 @@ from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 
 
-load_dotenv()
-sp = spotipy.Spotify(
-    auth_manager=SpotifyOAuth(
-        client_id=os.getenv("CLIENT_ID"),
-        client_secret=os.getenv("CLIENT_SECRET"),
-        redirect_uri=os.getenv("REDIRECT_URI"),
-        scope=os.getenv("SCOPE"),
-    )
-)
-pp = pprint.PrettyPrinter(indent=5)
-
-
 def print_playlists(path):
     filenames = os.listdir(path)
     for filename in sorted(filenames):
@@ -65,11 +53,12 @@ def aggregate_tracks_from_playlists(path):
 
 
 def find_and_remove_duplicates(raw_tracks):
-    pp.pprint(f"raw tracks dict: {len(raw_tracks)}")
+    logging.info(f"Finding and removing duplicate tracks.")
+    logging.info(f"Raw tracks dict: {len(raw_tracks)}")
     df = pd.DataFrame(raw_tracks)
     df.drop_duplicates(subset=["track_uri"], keep="last", inplace=True)
     filtered_tracks = df.to_dict("records")
-    pp.pprint(f"unique tracks after removing duplicates: {len(filtered_tracks)}")
+    logging.info(f"Unique tracks after removing duplicates: {len(filtered_tracks)}")
     # pp.pprint(filtered_tracks)
     return filtered_tracks
 
@@ -84,19 +73,59 @@ def create_uri_list(tracks):
     return track_uris
 
 
+""" The function below is intended to replace this list comprehension: 
+raw_tracks = [track_uris[i : i + 100] for i in range(0, len(track_uris), 100)] 
+"""
+
+
+def process_raw_tracks(track_uris):
+    logging.info(f"Beginning processing batches of raw tracks.")
+    batch_size = 100
+    raw_tracks = []
+    for i in range(0, len(track_uris), batch_size):
+        logging.info(f"Processing batch from index {i} to {i + batch_size}")
+        batch = track_uris[i : i + batch_size]
+        raw_tracks.append(batch)
+    return raw_tracks
+
+
 def get_batched_audio_features(track_uris):
     audio_features = []
-    raw_tracks = [track_uris[i : i + 100] for i in range(0, len(track_uris), 100)]
-    for batch in raw_tracks:
+    raw_tracks = process_raw_tracks(track_uris)
+    outfile = open("audio_features.json", "w")
+    for index, batch in enumerate(raw_tracks):
+        logging.info(f"Getting features for batch: {index}")
         features = sp.audio_features(batch)
         audio_features.append(features)
         time.sleep(4.5)
-        with open("audio_features.json", "w") as outfile:
-            json.dump(features, outfile)
+        json.dump(features, outfile)
     outfile.close()
 
 
+def setup_logger():
+    logging.basicConfig(
+        filename="batched_audio_features_log.log",
+        encoding="utf-8",
+        level=logging.DEBUG,
+        format="%(levelname)s:%(message)s - %(asctime)s ",
+    )
+
+
+# add try exceptions for stack tracing error logging too
+# https://realpython.com/python-logging/#:~:text=Handler%20%3A%20Handlers%20send%20the%20LogRecord,stdout%20or%20a%20disk%20file
 if __name__ == "__main__":
+    load_dotenv()
+    setup_logger()
+    pp = pprint.PrettyPrinter(indent=5)
+    sp = spotipy.Spotify(
+        auth_manager=SpotifyOAuth(
+            client_id=os.getenv("CLIENT_ID"),
+            client_secret=os.getenv("CLIENT_SECRET"),
+            redirect_uri=os.getenv("REDIRECT_URI"),
+            scope=os.getenv("SCOPE"),
+        )
+    )
+    logging.info(f"Program has started.")
     raw_tracks = aggregate_tracks_from_playlists(
         "./spotify_million_playlist_dataset/data"
     )
