@@ -101,7 +101,7 @@ def get_batched_audio_features_from_spotify_api(track_uris):
         features = sp.audio_features(batch)
         audio_features.append(features)
         time.sleep(4.5)
-        json.dump(features, outfile)
+    json.dump(audio_features, outfile)
     outfile.close()
 
 
@@ -112,7 +112,7 @@ def get_audio_analysis_from_spotify_api(uri_list):
         song_analysis = sp.audio_analysis(uri)
         time.sleep(4.5)
         audio_analysis_list.append(song_analysis)
-        json.dump(song_analysis, outfile)
+    json.dump(audio_analysis_list, outfile)
     outfile.close()
 
 
@@ -137,12 +137,13 @@ def create_and_start_threads(uris):
         target=thread_audio_features_from_spotify_api, args=(uris,)
     )
     analysis_thread = threading.Thread(target=thread_audio_analysis, args=(uris,))
-
+    start_time = time.time()
     logging.info(f"Main    : before running threads")
     print(f"Main    : before running threads")
-
     features_thread.start()
     analysis_thread.start()
+    while analysis_thread.is_alive() and features_thread.is_alive():
+        print_elapsed_time(start_time)
 
 
 def setup_logger():
@@ -152,6 +153,18 @@ def setup_logger():
         level=logging.DEBUG,
         format="%(levelname)s:%(message)s - %(asctime)s ",
     )
+
+
+def print_elapsed_time(start_time, interval=2):
+    current_time = time.time()
+    elapsed_time_seconds = current_time - start_time
+    elapsed_hours, remaining_seconds = divmod(elapsed_time_seconds, 3600)
+    elapsed_minutes, remaining_seconds = divmod(remaining_seconds, 60)
+    elapsed_seconds, elapsed_milliseconds = divmod(remaining_seconds, 1)
+    print(
+        f"Elapsed Time since threads started: {int(elapsed_hours):02}:{int(elapsed_minutes):02}:{int(elapsed_seconds):02}.{int(elapsed_milliseconds * 1000):03}"
+    )
+    time.sleep(interval)
 
 
 def run():
@@ -164,8 +177,8 @@ def run():
     print(f"Main    : waiting for the threads to finish...")
 
 
-# add try exceptions for stack tracing error logging too
-# https://realpython.com/python-logging/#:~:text=Handler%20%3A%20Handlers%20send%20the%20LogRecord,stdout%20or%20a%20disk%20file
+# TODO: add try exceptions for stack tracing error logging too
+# TODO: https://realpython.com/python-logging/#:~:text=Handler%20%3A%20Handlers%20send%20the%20LogRecord,stdout%20or%20a%20disk%20file
 if __name__ == "__main__":
     sp = initialize_spotipy()
     run()
