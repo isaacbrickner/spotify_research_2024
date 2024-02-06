@@ -99,9 +99,9 @@ def get_batched_audio_features_from_spotify_api(track_uris):
     for index, batch in enumerate(raw_tracks):
         logging.info(f"Getting features for batch: {index}")
         features = sp.audio_features(batch)
-        audio_features.append(features)
+        # audio_features.append(features)
         time.sleep(4.5)
-    json.dump(audio_features, outfile)
+        json.dump(features, outfile)
     outfile.close()
 
 
@@ -111,8 +111,10 @@ def get_audio_analysis_from_spotify_api(uri_list):
     for uri in uri_list:
         song_analysis = sp.audio_analysis(uri)
         time.sleep(4.5)
-        audio_analysis_list.append(song_analysis)
-    json.dump(audio_analysis_list, outfile)
+        # audio_analysis_list.append(
+        #     song_analysis
+        # )  # do i need the data structure? or can i just write to the file?
+        json.dump(song_analysis, outfile)
     outfile.close()
 
 
