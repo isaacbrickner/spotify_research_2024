@@ -115,7 +115,6 @@ def get_batched_audio_features_from_spotify_api(track_uris):
         for feature in features:
             json.dump(feature, outfile)
             outfile.write(",\n")
-
         for uri in features:
             matches = re.findall(pattern, str(uri))
             with open(processed_output_file, "a") as txt_file:
