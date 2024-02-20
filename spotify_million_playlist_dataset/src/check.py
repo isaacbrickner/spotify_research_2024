@@ -6,6 +6,7 @@
     python check.py path-to-mpd-data/
 
 """
+
 import sys
 import json
 import string
@@ -244,8 +245,10 @@ def tassert(condition, fmtstring, *args):
         gstats["errors"] += 1
         print(fmtstring % args)
 
+
 def usage():
     print(sys.argv[0], "--path path-to-mpd [--quick] [--verbose]")
+
 
 if __name__ == "__main__":
     path = None
@@ -255,13 +258,13 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     while args:
         arg = args.pop(0)
-        if arg == '--path':
+        if arg == "--path":
             path = args.pop(0)
-        elif arg == '--quick':
+        elif arg == "--quick":
             quick = True
-        elif arg == '--verbose':
+        elif arg == "--verbose":
             verbose = True
-        elif arg == '--help':
+        elif arg == "--help":
             usage()
 
     if path:
