@@ -5,6 +5,7 @@ import pandas as pd
 import time
 import logging
 import threading
+import re
 from globals import initialize_spotipy
 
 
@@ -92,30 +93,50 @@ def prepare_uris_for_dataset():
     return uri_list
 
 
+# TODO: need to take out each uri for a processed track in a batch
+# and save it to another called processed. only store it if the entire features data was
+# actually stored. otherwise do it again. then start from there.
+
+
 def get_batched_audio_features_from_spotify_api(track_uris):
     audio_features = []
     raw_tracks = process_raw_tracks(track_uris)
     outfile = open("audio_features.json", "w")
+    processed_output_file = "processed_uri.txt"
+    pattern = r"spotify:track:[a-zA-Z0-9]{22}"
+    start_time = time.time()
     for index, batch in enumerate(raw_tracks):
+        print_elapsed_time(start_time)
         logging.info(f"Getting features for batch: {index}")
         features = sp.audio_features(batch)
-        # audio_features.append(features)
-        time.sleep(4.5)
-        json.dump(features, outfile)
+        audio_features.append(features)
+        time.sleep(5.0)
+
+        for feature in features:
+            json.dump(feature, outfile)
+            outfile.write(",\n")
+
+        for uri in features:
+            matches = re.findall(pattern, str(uri))
+            with open(processed_output_file, "a") as txt_file:
+                txt_file.write(f"{str(matches)}\n")
     outfile.close()
 
 
-def get_audio_analysis_from_spotify_api(uri_list):
-    audio_analysis_list = []
-    outfile = open("audio_analysis_dataset.json", "w")
-    for uri in uri_list:
-        song_analysis = sp.audio_analysis(uri)
-        time.sleep(4.5)
-        # audio_analysis_list.append(
-        #     song_analysis
-        # )  # do i need the data structure? or can i just write to the file?
-        json.dump(song_analysis, outfile)
-    outfile.close()
+# TODO: Get analysis later. not needed yet.
+
+
+# def get_audio_analysis_from_spotify_api(uri_list):
+#     audio_analysis_list = []
+#     outfile = open("audio_analysis_dataset.json", "w")
+#     for uri in uri_list:
+#         song_analysis = sp.audio_analysis(uri)
+#         time.sleep(4.5)
+#         # audio_analysis_list.append(
+#         #     song_analysis
+#         # )  # do i need the data structure? or can i just write to the file?
+#         json.dump(song_analysis, outfile)
+#     outfile.close()
 
 
 def thread_audio_features_from_spotify_api(uri_list):
@@ -125,11 +146,16 @@ def thread_audio_features_from_spotify_api(uri_list):
     print(f"Main    : Audio features thread has finished.")
 
 
-def thread_audio_analysis(uri_list):
-    logging.info(f"Audio analysis thread starting...")
-    get_audio_analysis_from_spotify_api(uri_list)
-    logging.info(f"Audio analysis thread has finished.")
-    print(f"Main    : Audio analysis thread has finished.")
+# TODO: uncomment when doing audio analysis features
+
+# def thread_audio_analysis(uri_list):
+#     logging.info(f"Audio analysis thread starting...")
+#     get_audio_analysis_from_spotify_api(uri_list)
+#     logging.info(f"Audio analysis thread has finished.")
+#     print(f"Main    : Audio analysis thread has finished.")
+
+
+# TODO: uncomment when needing to multithread
 
 
 def create_and_start_threads(uris):
@@ -138,14 +164,14 @@ def create_and_start_threads(uris):
     features_thread = threading.Thread(
         target=thread_audio_features_from_spotify_api, args=(uris,)
     )
-    analysis_thread = threading.Thread(target=thread_audio_analysis, args=(uris,))
-    start_time = time.time()
+    # analysis_thread = threading.Thread(target=thread_audio_analysis, args=(uris,))
+    # start_time = time.time()
     logging.info(f"Main    : before running threads")
     print(f"Main    : before running threads")
     features_thread.start()
-    analysis_thread.start()
-    while analysis_thread.is_alive() and features_thread.is_alive():
-        print_elapsed_time(start_time)
+    # analysis_thread.start()
+    # while analysis_thread.is_alive() and features_thread.is_alive():
+    #     print_elapsed_time(start_time)
 
 
 def setup_logger():
@@ -174,7 +200,7 @@ def run():
     logging.info(f"Program has started.")
     print(f"Program has started.")
     uris = prepare_uris_for_dataset()
-    create_and_start_threads(uris)
+    thread_audio_features_from_spotify_api(uris)
     logging.info(f"Main    : waiting for the threads to finish...")
     print(f"Main    : waiting for the threads to finish...")
 
